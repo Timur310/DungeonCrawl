@@ -12,8 +12,7 @@ Rougelikegame (Java + JavaFX)
 
 <h1>Pictures:</h1>
 
-<br>![alt text](https://i.imgur.com/cxLjWAr.png)</br>
-<br>![alt text](https://i.imgur.com/Sv3UqtI.png)</br>
-<br>![alt text](https://i.imgur.com/L1FMMH2.png)</br>
-<br>![alt text](https://i.imgur.com/HrxxVaZ.png)</br>
+<br>![alt text](https://github.com/Timur310/DungeonCrawl/blob/main/img/final_img_1.png?raw=true)</br>
+
+<br>![alt text](https://github.com/Timur310/DungeonCrawl/blob/main/img/final_img_2.png?raw=true)</br>
 
