@@ -15,7 +15,9 @@ import com.codecool.dungeoncrawl.logic.actors.Skeleton;
 
 import com.codecool.dungeoncrawl.logic.Mapmanager;
 
+import com.codecool.dungeoncrawl.model.PlayerModel;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -34,6 +36,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import org.w3c.dom.Text;
 
 import java.awt.*;
@@ -42,10 +45,10 @@ import java.util.Optional;
 
 public class Main extends Application {
     public static boolean halfCtrlSPressed = false;
-    Cell cell;
-    GameMap map = MapLoader.loadMap("/map.txt");
-
-    Mapmanager mapManager = new Mapmanager();
+    Stage currentStage;
+    GameMap map = MapLoader.loadMap("/map.txt",30,22);
+    Menu menu = new Menu();
+    LoadGameMenu load = new LoadGameMenu();
 
     ListView<String> inventory = new ListView();
     public static double colr;
@@ -58,14 +61,148 @@ public class Main extends Application {
     Label damageLabel = new Label();
     Label shieldLabel = new Label();
 
+
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        GridPane ui = new GridPane();
 
+
+        //handle window closing by hand
+        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent e) {
+                Platform.exit();
+                System.exit(0);
+            }
+        });
+
+
+        Scene menuScene = new Scene(menu.createContent());
+        //new scene for menu, to switch between the game and ui
+        primaryStage.setScene(menuScene);
+        updatePlayerState();
+        refresh();
+
+        menuScene.setOnKeyPressed(this::menuKey);
+        currentStage = primaryStage;
+        primaryStage.setTitle("Dungeon Crawl");
+        primaryStage.show();
+    }
+
+    public void menuKey(KeyEvent event) {
+        int currentItem = menu.getCurrentItem();
+        if (event.getCode() == KeyCode.UP) {
+            if (currentItem > 0) {
+                menu.getMenuItem(currentItem).setActive(false);
+                menu.getMenuItem(--currentItem).setActive(true);
+                menu.getMenuItem(currentItem);
+                menu.setCurrentItem(currentItem);
+            }
+        }
+
+        if (event.getCode() == KeyCode.DOWN) {
+            if (currentItem < menu.getMenuBox().getChildren().size() - 1) {
+                menu.getMenuItem(currentItem).setActive(false);
+                menu.getMenuItem(++currentItem).setActive(true);
+                menu.getMenuItem(currentItem);
+                menu.setCurrentItem(currentItem);
+            }
+        }
+
+        if (event.getCode() == KeyCode.ENTER) {
+            Menu.MenuItem item = menu.getMenuItem(currentItem);
+            //read the menu text, 1.getteer for the text object 2.for reading the text object as string format
+            switch (item.getText().getText()) {
+                case "New game":
+                    currentStage.hide();
+                    Stage newStage = new Stage();
+                    newGame(newStage, null);
+                    break;
+                case "Load game":
+                    currentStage.hide();
+                    Stage loadStage = new Stage();
+                    loadGame(loadStage);
+                    break;
+                case "Exit":
+                    System.exit(-1);
+                    break;
+            }
+        }
+    }
+
+    public void loadKey(KeyEvent event) {
+        int currentItem = load.getCurrentItem();
+        if (event.getCode() == KeyCode.UP) {
+            if (currentItem > 0) {
+                load.getMenuItem(currentItem).setActive(false);
+                load.getMenuItem(--currentItem).setActive(true);
+                load.getMenuItem(currentItem);
+                load.setCurrentItem(currentItem);
+            }
+        }
+
+        if (event.getCode() == KeyCode.DOWN) {
+            if (currentItem < load.getMenuBox().getChildren().size() - 1) {
+                load.getMenuItem(currentItem).setActive(false);
+                load.getMenuItem(++currentItem).setActive(true);
+                load.getMenuItem(currentItem);
+                load.setCurrentItem(currentItem);
+            }
+        }
+
+        if (event.getCode() == KeyCode.ENTER) {
+            LoadGameMenu.MenuItem player = load.getMenuItem(currentItem);
+            //read the menu text, 1.getteer for the text object 2.for reading the text object as string format
+            if (player.getText().getText().equals("Back")) {
+                currentStage.hide();
+                Stage sceneMenu = new Stage();
+                menuScene(sceneMenu);
+            } else {
+                currentStage.hide();
+                Stage gameStage = new Stage();
+                newGame(gameStage, player);
+            }
+        }
+    }
+
+
+    private void menuScene(Stage newStage) {
+        currentStage = newStage;
+        Scene menuScene = new Scene(menu.createContent());
+        menuScene.setOnKeyPressed(this::menuKey);
+        newStage.setScene(menuScene);
+        newStage.show();
+    }
+
+
+    private void loadGame(Stage newStage) {
+        currentStage = newStage;
+        Scene loadScene = new Scene(load.createContent());
+        loadScene.setOnKeyPressed(this::loadKey);
+        newStage.setScene(loadScene);
+        newStage.show();
+    }
+
+    private void newGame(Stage newStage, LoadGameMenu.MenuItem player) {
+
+        if (player == null) {
+            map = MapLoader.loadMap("/map.txt",30,22);
+            textdialog(newStage);
+        } else {
+            int playerId = player.getPlayerId();
+            PlayerModel playerAttribute = load.Attributes(playerId);
+            loadMap(playerAttribute);
+            loadPlayer(playerAttribute);
+        }
+        currentStage = newStage;
+        GridPane ui = new GridPane();
+//        for(Skeleton skel : map.getSkeletons()){
+//            System.out.println(skel.getX());
+//            System.out.println(skel.getY());
+//        }
         ui.setPrefWidth(200);
         ui.setPadding(new Insets(10));
 
@@ -91,57 +228,25 @@ public class Main extends Application {
         borderPane.setCenter(canvas);
         borderPane.setRight(ui);
 
-        Scene scene = new Scene(borderPane);
-        primaryStage.setScene(scene);
-        textdialog(primaryStage);
+        Scene gameScene = new Scene(borderPane);
+        newStage.setScene(gameScene);
+        gameScene.setOnKeyPressed(this::savekey);
+        newStage.show();
+
+    }
+
+    private void loadMap(PlayerModel playerAttribute) {
+        map = MapLoader.loadMap("/map.txt", playerAttribute.getX(),playerAttribute.getY());
+
+    }
+
+    private void loadPlayer(PlayerModel player) {
+        map.getPlayer().setShieldDuration(player.getShield());
+        map.getPlayer().loadHealt(player.getHp());
+        map.getPlayer().loadDagame(player.getDamage());
         updatePlayerState();
         refresh();
-        //scene.setOnKeyPressed(this::onKeyPressed);
-        scene.setOnKeyPressed(this::savekey);
-        primaryStage.setTitle("Dungeon Crawl");
-        primaryStage.show();
     }
-
-    /*private void onKeyPressed(KeyEvent keyEvent) {
-        switch (keyEvent.getCode()) {
-            case W:
-                map.getPlayer().move(0, -1, map.getPlayer().getisInvisible());
-                refresh();
-                break;
-            case S:
-                map.getPlayer().move(0, 1, map.getPlayer().getisInvisible());
-                refresh();
-                break;
-            case A:
-                map.getPlayer().move(-1, 0, map.getPlayer().getisInvisible());
-                refresh();
-                break;
-            case D:
-                map.getPlayer().move(1, 0, map.getPlayer().getisInvisible());
-                refresh();
-                break;
-            case E:
-                if (map.getPlayer().getCell().getItem() != null) {
-                    pickItem(map.getPlayer().getCell().getItem());
-                } else {
-                    checkChest();
-                }
-                break;
-            case Q:
-                map.getPlayer().setisInvisible(!map.getPlayer().getisInvisible());
-                isLight = !isLight;
-                updatePlayerState();
-                refresh();
-                break;
-            case R:
-                checkEnemy();
-                refresh();
-                break;
-
-        }
-    }
-
-     */
 
     public void savekey(KeyEvent keyEvent) {
         if (keyEvent.getCode().getName().equals("W")) {
@@ -163,6 +268,7 @@ public class Main extends Application {
         if (keyEvent.getCode().getName().equals("E")) {
             if (map.getPlayer().getCell().getItem() != null) {
                 pickItem(map.getPlayer().getCell().getItem());
+                updatePlayerState();
             } else {
                 checkChest();
             }
@@ -246,7 +352,7 @@ public class Main extends Application {
         }
     }
 
-    public void textdialog(Stage s){
+    public void textdialog(Stage s) {
         s.setTitle("creating textInput dialog");
         TilePane r = new TilePane();
         TextInputDialog td = new TextInputDialog("enter any text");

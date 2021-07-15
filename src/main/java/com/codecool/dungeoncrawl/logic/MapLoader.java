@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 public class MapLoader {
-    public static GameMap loadMap(String mapName) {
+    public static GameMap loadMap(String mapName, int xpos, int ypos) {
         Random rand = new Random();
         InputStream is = MapLoader.class.getResourceAsStream(mapName);
         Scanner scanner = new Scanner(is);
@@ -37,6 +37,15 @@ public class MapLoader {
             for (int x = 0; x < width; x++) {
                 if (x < line.length()) {
                     Cell cell = map.getCell(x, y);
+                    // add player
+                    if (x==xpos && y==ypos){
+                        cell.setType(CellType.FLOOR);
+                        map.setPlayer(new Player(cell));
+                        // add skeletons
+                    } else if((x==28 && y==9) || (x==32 && y==9) || (x==30 && y==12)){
+                        cell.setType(CellType.FLOOR);
+                        map.addSkeleton(new Skeleton(cell));
+                    }
                     switch (line.charAt(x)) {
                         case ' ':
                             if (rand.nextInt(100) < 25) {
@@ -175,15 +184,15 @@ public class MapLoader {
                                 cell.setType(CellType.FLOOR);
                                 break;
                             }
-                        case 's':
-                            cell.setType(CellType.FLOOR);
-                            map.addSkeleton(new Skeleton(cell));
-//                            new Skeleton(cell);
-                            break;
-                        case '@':
-                            cell.setType(CellType.FLOOR);
-                            map.setPlayer(new Player(cell));
-                            break;
+//                        case 's':
+//                            cell.setType(CellType.FLOOR);
+//                            map.addSkeleton(new Skeleton(cell));
+////                            new Skeleton(cell);
+//                            break;
+//                        case '@':
+//                            cell.setType(CellType.FLOOR);
+//                            map.setPlayer(new Player(cell));
+//                            break;
                         default:
                             throw new RuntimeException("Unrecognized character: '" + line.charAt(x) + "'");
                     }
